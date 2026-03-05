@@ -510,11 +510,11 @@ export default function App() {
   const [filterTier, setFilterTier] = useState<Tier | 'Todos'>('Todos');
   const [filterType, setFilterType] = useState<ClientType | 'Todos'>('Todos');
 
-  if (!authUser) return <LoginPage onLogin={setAuthUser} />;
-
   useEffect(() => {
     fetchClients();
   }, []);
+
+  if (!authUser) return <LoginPage onLogin={setAuthUser} />;
 
   const fetchClients = async () => {
     const { data, error } = await supabase
