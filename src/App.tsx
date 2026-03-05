@@ -2,6 +2,7 @@
  * CRM Builder - Sistema de Gestão de Clientes
  */
 import React, { useState, useEffect } from 'react';
+import { supabase } from './lib/supabase';
 import {
   LayoutDashboard, Users, TrendingUp, Target, BarChart3, Settings,
   Plus, X, Eye, EyeOff, LogIn, LogOut, FileText, Mail, Lock,
@@ -49,6 +50,7 @@ interface User { email: string; name: string; role: string; }
 const USERS = [
   { email: 'admin@empresa.com', password: 'password', name: 'Administrador', role: 'Admin' },
   { email: 'ricardo.luz@eunaman.com.br', password: '15975321', name: 'Ricardo Luz', role: 'Gestor' },
+  { email: 'lucas.contadini@eunaman.com.br', password: '123456', name: 'Lucas Contadini', role: 'Gestor' },
 ];
 const STORAGE_KEY = 'crm_saved_credentials';
 
@@ -508,10 +510,68 @@ export default function App() {
   const [filterTier, setFilterTier] = useState<Tier | 'Todos'>('Todos');
   const [filterType, setFilterType] = useState<ClientType | 'Todos'>('Todos');
 
-  if (!authUser) return <LoginPage onLogin={setAuthUser} />;
+  useEffect(() => {
+    fetchClients();
+  }, []);
 
-  const handleSave = (c: Client) => {
-    setClients(prev => prev.find(x => x.id === c.id) ? prev.map(x => x.id === c.id ? c : x) : [...prev, c]);
+  const fetchClients = async () => {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching clients:', error);
+    } else if (data) {
+      // Map database snake_case to frontend camelCase
+      const mappedClients: Client[] = data.map(c => ({
+        id: c.id,
+        name: c.name, contact: c.contact, phone: c.phone, email: c.email,
+        type: c.type, size: c.size,
+        ticketMedio: Number(c.ticket_medio), margem: Number(c.margem), complexidade: c.complexidade,
+        frequencia: c.frequencia, mix: c.mix,
+        sensibilidadePreco: c.sensibilidade_preco, dependenciaOp: c.dependencia_op,
+        potencialTotal: Number(c.potencial_total), gapVenda: Number(c.gap_venda),
+        crossSell: c.cross_sell, upsell: c.upsell,
+        potencialMapeado: c.potencial_mapeado,
+        tier: c.tier, score: Number(c.score), ultimaInteracao: c.ultima_interacao, notas: c.notas,
+        riscoOp: c.risco_op, relacEstrategico: c.relac_estrategico,
+        nurtureStep: c.nurture_step, pipelineStage: c.pipeline_stage
+      }));
+      setClients(mappedClients);
+    }
+  };
+
+  const handleSave = async (c: Client) => {
+    // Map frontend camelCase back to database snake_case
+    const dbClient = {
+      name: c.name, contact: c.contact, phone: c.phone, email: c.email,
+      type: c.type, size: c.size,
+      ticket_medio: c.ticketMedio, margem: c.margem, complexidade: c.complexidade,
+      frequencia: c.frequencia, mix: c.mix,
+      sensibilidade_preco: c.sensibilidadePreco, dependencia_op: c.dependenciaOp,
+      potencial_total: c.potencialTotal, gap_venda: c.gapVenda,
+      cross_sell: c.crossSell, upsell: c.upsell,
+      potencial_mapeado: c.potencialMapeado,
+      tier: c.tier, score: c.score, ultima_interacao: c.ultimaInteracao, notas: c.notas,
+      risco_op: c.riscoOp, relac_estrategico: c.relacEstrategico,
+      nurture_step: c.nurtureStep, pipeline_stage: c.pipelineStage
+    };
+
+    if (clients.find(x => x.id === c.id)) {
+      const { error } = await supabase
+        .from('clients')
+        .update(dbClient)
+        .eq('id', c.id);
+      if (error) console.error('Error updating client:', error);
+    } else {
+      const { error } = await supabase
+        .from('clients')
+        .insert([dbClient]);
+      if (error) console.error('Error inserting client:', error);
+    }
+
+    fetchClients();
     setEditingClient(false);
   };
 
