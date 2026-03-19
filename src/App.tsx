@@ -1334,6 +1334,11 @@ export default function App() {
 
   // Renova o access token usando o refresh token
   const blingRefreshToken = async (): Promise<string | null> => {
+    if (!blingConfig.refreshToken) {
+      setBlingImportError('Sessão expirada. Clique em "Conectar ao Bling" para autenticar novamente.');
+      saveBlingConfig({ ...blingConfig, connected: false, accessToken: '', refreshToken: '' });
+      return null;
+    }
     try {
       const res = await fetch('/api/proxy-bling', {
         method: 'POST',
@@ -1345,14 +1350,19 @@ export default function App() {
           refreshToken: blingConfig.refreshToken
         })
       });
-      if (!res.ok) throw new Error('Falha ao renovar token');
       const data = await res.json();
+      if (!res.ok) {
+        // O refresh token também pode ter expirado; força nova autenticação
+        const errMsg = data?.error_description || data?.message || data?.error || `Status ${res.status}`;
+        saveBlingConfig({ ...blingConfig, connected: false, accessToken: '', refreshToken: '' });
+        throw new Error(`Refresh token inválido ou expirado: ${errMsg}. Reconecte ao Bling.`);
+      }
       const newCfg = { ...blingConfig, accessToken: data.access_token, refreshToken: data.refresh_token, connected: true };
       saveBlingConfig(newCfg);
       return data.access_token;
     } catch (e: any) {
       console.error('Erro ao renovar token Bling:', e);
-      setBlingImportError('Falha ao renovar token: ' + e.message);
+      setBlingImportError(e.message);
       return null;
     }
   };
@@ -1364,19 +1374,35 @@ export default function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        proxyUrl: `https://www.bling.com.br/Api/v3/contatos?pagina=${page}&limite=100&tipoPessoa=J`,
+        proxyUrl: `https://www.bling.com.br/Api/v3/contatos?pagina=${page}&limite=100`,
         method: 'GET',
         headers: { 'Authorization': `Bearer ${tkn}`, 'Accept': 'application/json' }
       })
     });
     let res = await doFetch(token);
-    if (res.status === 401) {
+    // 401 = token expirado, 403 = token expirado ou scope insuficiente → tenta refresh
+    if (res.status === 401 || res.status === 403) {
       const refreshed = await blingRefreshToken();
-      if (!refreshed) throw new Error('Token expirado e não foi possível renovar.');
+      if (!refreshed) {
+        // A mensagem já foi setada pelo blingRefreshToken, apenas re-lança
+        throw new Error(blingImportError || 'Token expirado. Reconecte ao Bling.');
+      }
       token = refreshed;
       res = await doFetch(token);
     }
-    if (!res.ok) throw new Error(`API Bling retornou status ${res.status}`);
+    if (!res.ok) {
+      // Lê o JSON de erro do Bling para mostrar a mensagem real
+      let errDetail = `Status ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson?.error?.fields?.length) {
+          errDetail = errJson.error.fields.map((f: any) => f.msg).join(', ');
+        } else {
+          errDetail = errJson?.error?.message || errJson?.message || errJson?.error_description || errDetail;
+        }
+      } catch { /* ignora */ }
+      throw new Error(`Bling: ${errDetail}`);
+    }
     const json = await res.json();
     const contatos = json.data || [];
     return contatos.map((c: any): Partial<Client> => ({
