@@ -1317,8 +1317,14 @@ export default function App() {
   // Busca clientes/contatos do Bling e converte para o formato do CRM
   const blingFetchContacts = async (page = 1): Promise<Partial<Client>[]> => {
     let token = blingConfig.accessToken;
-    const doFetch = async (tkn: string) => fetch(`https://www.bling.com.br/Api/v3/contatos?pagina=${page}&limite=100&tipoPessoa=J`, {
-      headers: { 'Authorization': `Bearer ${tkn}`, 'Accept': 'application/json' }
+    const doFetch = async (tkn: string) => fetch('/api/proxy-bling', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        proxyUrl: `https://www.bling.com.br/Api/v3/contatos?pagina=${page}&limite=100&tipoPessoa=J`,
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${tkn}`, 'Accept': 'application/json' }
+      })
     });
     let res = await doFetch(token);
     if (res.status === 401) {
