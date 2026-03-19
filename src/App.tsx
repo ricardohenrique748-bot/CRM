@@ -1178,10 +1178,32 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         // garante que redirectUri existe mesmo em configs antigas
-        return { redirectUri: DEFAULT_REDIRECT_URI, ...parsed };
+        return { 
+          redirectUri: DEFAULT_REDIRECT_URI, 
+          ...parsed,
+          // Pre-preenche se o usuário acabou de fornecer aqui
+          clientId: parsed.clientId || '1c4535a5c37bf5f271c3c29f4c836b0c8f817daf',
+          clientSecret: parsed.clientSecret || '2fa22fd40737a11a9c25309a5d07ddd8e0390793cc848c02be040f7bd8e8'
+        };
       }
-      return { clientId: '', clientSecret: '', accessToken: '', refreshToken: '', connected: false, redirectUri: DEFAULT_REDIRECT_URI };
-    } catch { return { clientId: '', clientSecret: '', accessToken: '', refreshToken: '', connected: false, redirectUri: DEFAULT_REDIRECT_URI }; }
+      return { 
+        clientId: '1c4535a5c37bf5f271c3c29f4c836b0c8f817daf', 
+        clientSecret: '2fa22fd40737a11a9c25309a5d07ddd8e0390793cc848c02be040f7bd8e8', 
+        accessToken: '', 
+        refreshToken: '', 
+        connected: false, 
+        redirectUri: DEFAULT_REDIRECT_URI 
+      };
+    } catch { 
+      return { 
+        clientId: '1c4535a5c37bf5f271c3c29f4c836b0c8f817daf', 
+        clientSecret: '2fa22fd40737a11a9c25309a5d07ddd8e0390793cc848c02be040f7bd8e8', 
+        accessToken: '', 
+        refreshToken: '', 
+        connected: false, 
+        redirectUri: DEFAULT_REDIRECT_URI 
+      }; 
+    }
   });
   const [blingCopied, setBlingCopied] = useState(false);
   const [blingImportStatus, setBlingImportStatus] = useState<'idle' | 'loading' | 'preview' | 'importing' | 'success' | 'error'>('idle');
@@ -1413,7 +1435,7 @@ export default function App() {
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
               <label className="flex items-center gap-1.5 text-xs font-bold text-amber-800 mb-2">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                URL de Redirecionamento — cadastre esta URL exata no Bling
+                URL de Redirecionamento — Cadastre EXATAMENTE esta URL no Bling
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -1438,9 +1460,11 @@ export default function App() {
                   {blingCopied ? <><CheckCheck className="w-3.5 h-3.5" />Copiado!</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
                 </motion.button>
               </div>
-              <p className="text-[10px] text-amber-700 mt-2">
-                ⚠️ A URL cadastrada no Bling deve ser <strong>idêntica</strong> a esta. Qualquer diferença (barra no final, http vs https, etc.) causa o erro <code className="bg-amber-100 px-1 rounded">redirect_uri_mismatch</code>.
-              </p>
+              <div className="text-[10px] text-amber-700 mt-2 space-y-1">
+                <p>⚠️ <strong>Atenção:</strong> Se você está usando o <u>localhost</u>, a URL deve ser <code>http://localhost:5173/</code>.</p>
+                <p>⚠️ Se você publicou no <u>Vercel</u>, você deve atualizar a URL no portal do Bling para o link da Vercel.</p>
+                <p>Qualquer diferença (como falta da barra <code>/</code> no final) causará o erro <strong>redirect_uri_mismatch</strong>.</p>
+              </div>
             </div>
 
             {/* Credenciais */}
