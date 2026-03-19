@@ -8,7 +8,8 @@ import {
   Plus, X, Eye, EyeOff, LogIn, LogOut, FileText, Mail, Lock,
   ChevronDown, Search, AlertTriangle, CheckCircle2, Edit2,
   DollarSign, ShoppingCart, Zap, ArrowUpRight, Save, Trash2,
-  GitMerge, Calendar, Filter, RefreshCw, MessageSquare, Clock, Award, MessageCircle
+  GitMerge, Calendar, Filter, RefreshCw, MessageSquare, Clock, Award, MessageCircle,
+  Link, Download, ExternalLink, KeyRound, CheckCheck, Info, XCircle, Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -18,7 +19,7 @@ type ClientSize = 'Pequeno' | 'Médio' | 'Grande';
 type Complexity = 'Baixa' | 'Média' | 'Alta';
 type Frequency = 'Semanal' | 'Mensal' | 'Trimestral' | 'Irregular';
 type Tier = 'A' | 'B' | 'C';
-type Tab = 'dashboard' | 'clients' | 'pipeline' | 'matrix' | 'nurture';
+type Tab = 'dashboard' | 'clients' | 'pipeline' | 'matrix' | 'nurture' | 'settings';
 
 interface Client {
   id: number;
@@ -45,6 +46,15 @@ interface Client {
 }
 
 interface User { email: string; name: string; role: string; }
+
+interface BlingConfig {
+  clientId: string;
+  clientSecret: string;
+  accessToken: string;
+  refreshToken: string;
+  connected: boolean;
+  redirectUri: string; // URL exata cadastrada no Bling
+}
 
 // ─── AUTH DATA ─────────────────────────────────────────────────────────────
 const USERS = [
@@ -1159,28 +1169,506 @@ export default function App() {
   );
 
 
+  // ── BLING CONFIG ────────────────────────────────────────────────────────────
+  const BLING_STORAGE_KEY = 'crm_bling_config';
+  const DEFAULT_REDIRECT_URI = window.location.origin + '/';
+  const [blingConfig, setBlingConfig] = useState<BlingConfig>(() => {
+    try {
+      const saved = localStorage.getItem(BLING_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // garante que redirectUri existe mesmo em configs antigas
+        return { redirectUri: DEFAULT_REDIRECT_URI, ...parsed };
+      }
+      return { clientId: '', clientSecret: '', accessToken: '', refreshToken: '', connected: false, redirectUri: DEFAULT_REDIRECT_URI };
+    } catch { return { clientId: '', clientSecret: '', accessToken: '', refreshToken: '', connected: false, redirectUri: DEFAULT_REDIRECT_URI }; }
+  });
+  const [blingCopied, setBlingCopied] = useState(false);
+  const [blingImportStatus, setBlingImportStatus] = useState<'idle' | 'loading' | 'preview' | 'importing' | 'success' | 'error'>('idle');
+  const [blingImportError, setBlingImportError] = useState('');
+  const [blingPreviewClients, setBlingPreviewClients] = useState<Partial<Client>[]>([]);
+  const [blingImportCount, setBlingImportCount] = useState(0);
+  const [blingPage, setBlingPage] = useState(1);
+
+  const saveBlingConfig = (cfg: BlingConfig) => {
+    localStorage.setItem(BLING_STORAGE_KEY, JSON.stringify(cfg));
+    setBlingConfig(cfg);
+  };
+
+  // Inicia o fluxo OAuth2 do Bling
+  const blingAuthorize = () => {
+    if (!blingConfig.clientId) { alert('Informe o Client ID primeiro.'); return; }
+    if (!blingConfig.redirectUri) { alert('Informe a URL de redirecionamento primeiro.'); return; }
+    // Salva as credenciais antes de redirecionar para garantir que estejam disponíveis ao retornar
+    saveBlingConfig(blingConfig);
+    const redirectUri = encodeURIComponent(blingConfig.redirectUri);
+    const scope = encodeURIComponent('92345');
+    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${blingConfig.clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=crm_bling`;
+    window.location.href = url;
+  };
+
+  // Troca o authorization code pelo access token
+  const blingExchangeCode = async (code: string) => {
+    try {
+      // Lê config salva do localStorage para garantir acesso após redirect
+      let cfg = blingConfig;
+      try {
+        const saved = localStorage.getItem(BLING_STORAGE_KEY);
+        if (saved) cfg = { redirectUri: DEFAULT_REDIRECT_URI, ...JSON.parse(saved) };
+      } catch { /* usa blingConfig do estado */ }
+      const credentials = btoa(`${cfg.clientId}:${cfg.clientSecret}`);
+      const res = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': `Basic ${credentials}` },
+        body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: cfg.redirectUri || DEFAULT_REDIRECT_URI })
+      });
+      if (!res.ok) {
+        const errTxt = await res.text().catch(() => res.status.toString());
+        throw new Error(`Erro ${res.status}: ${errTxt}`);
+      }
+      const data = await res.json();
+      const newCfg = { ...cfg, accessToken: data.access_token, refreshToken: data.refresh_token, connected: true };
+      saveBlingConfig(newCfg);
+      // Limpa o código da URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('code'); url.searchParams.delete('state');
+      window.history.replaceState({}, '', url.toString());
+    } catch (e: any) { setBlingImportError('Falha ao trocar code por token: ' + e.message); }
+  };
+
+  // Renova o access token usando o refresh token
+  const blingRefreshToken = async (): Promise<string | null> => {
+    try {
+      const credentials = btoa(`${blingConfig.clientId}:${blingConfig.clientSecret}`);
+      const res = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': `Basic ${credentials}` },
+        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: blingConfig.refreshToken })
+      });
+      if (!res.ok) throw new Error(`Erro ${res.status}`);
+      const data = await res.json();
+      const newCfg = { ...blingConfig, accessToken: data.access_token, refreshToken: data.refresh_token, connected: true };
+      saveBlingConfig(newCfg);
+      return data.access_token;
+    } catch (e: any) { setBlingImportError('Falha ao renovar token: ' + e.message); return null; }
+  };
+
+  // Busca clientes/contatos do Bling e converte para o formato do CRM
+  const blingFetchContacts = async (page = 1): Promise<Partial<Client>[]> => {
+    let token = blingConfig.accessToken;
+    const doFetch = async (tkn: string) => fetch(`https://www.bling.com.br/Api/v3/contatos?pagina=${page}&limite=100&tipoPessoa=J`, {
+      headers: { 'Authorization': `Bearer ${tkn}`, 'Accept': 'application/json' }
+    });
+    let res = await doFetch(token);
+    if (res.status === 401) {
+      const refreshed = await blingRefreshToken();
+      if (!refreshed) throw new Error('Token expirado e não foi possível renovar.');
+      token = refreshed;
+      res = await doFetch(token);
+    }
+    if (!res.ok) throw new Error(`API Bling retornou status ${res.status}`);
+    const json = await res.json();
+    const contatos = json.data || [];
+    return contatos.map((c: any): Partial<Client> => ({
+      name: c.nome || c.razaoSocial || '',
+      contact: c.fantasia || c.nome || '',
+      phone: (c.telefone || '').replace(/[^0-9()+\- ]/g, ''),
+      email: c.email || '',
+      type: 'Frotista',
+      size: 'Médio',
+      ticketMedio: 0, margem: 0, complexidade: 'Média',
+      frequencia: 'Mensal', mix: '',
+      sensibilidadePreco: 'Média', dependenciaOp: 'Média',
+      potencialTotal: 0, gapVenda: 0,
+      crossSell: '', upsell: '',
+      potencialMapeado: false, tier: 'C', score: 0,
+      ultimaInteracao: new Date().toISOString().split('T')[0], notas: `Importado do Bling. CNPJ/CPF: ${c.cpfCnpj || ''}`,
+      riscoOp: 'Baixa', relacEstrategico: 'Baixa',
+      nurtureStep: 0, pipelineStage: 0,
+    }));
+  };
+
+  // Preview de importação
+  const blingStartImport = async () => {
+    setBlingImportStatus('loading');
+    setBlingImportError('');
+    try {
+      const first = await blingFetchContacts(1);
+      setBlingPreviewClients(first);
+      setBlingImportStatus('preview');
+      setBlingPage(1);
+    } catch (e: any) {
+      setBlingImportError(e.message);
+      setBlingImportStatus('error');
+    }
+  };
+
+  // Confirma e salva no banco
+  const blingConfirmImport = async () => {
+    setBlingImportStatus('importing');
+    let count = 0;
+    try {
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const batch = await blingFetchContacts(page);
+        if (batch.length === 0) { hasMore = false; break; }
+        for (const raw of batch) {
+          const c = raw as Client;
+          const newScore = calculateScore(c);
+          const newTier = assignTierFromScore(newScore);
+          const full: Omit<Client, 'id'> = {
+            ...emptyClient(), ...c, score: newScore, tier: newTier,
+          };
+          const dbClient = {
+            name: full.name, contact: full.contact, phone: full.phone, email: full.email,
+            type: full.type, size: full.size,
+            ticket_medio: full.ticketMedio, margem: full.margem, complexidade: full.complexidade,
+            frequencia: full.frequencia, mix: full.mix,
+            sensibilidade_preco: full.sensibilidadePreco, dependencia_op: full.dependenciaOp,
+            potencial_total: full.potencialTotal, gap_venda: full.gapVenda,
+            cross_sell: full.crossSell, upsell: full.upsell,
+            potencial_mapeado: full.potencialMapeado,
+            tier: full.tier, score: full.score, ultima_interacao: full.ultimaInteracao, notas: full.notas,
+            risco_op: full.riscoOp, relac_estrategico: full.relacEstrategico,
+            nurture_step: full.nurtureStep, pipeline_stage: full.pipelineStage,
+          };
+          await supabase.from('clients').insert([dbClient]);
+          count++;
+        }
+        page++;
+        if (batch.length < 100) hasMore = false;
+      }
+      setBlingImportCount(count);
+      setBlingImportStatus('success');
+      fetchClients();
+    } catch (e: any) {
+      setBlingImportError(e.message);
+      setBlingImportStatus('error');
+    }
+  };
+
+  // Verifica se há um code OAuth2 na URL ao carregar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    if (code && state === 'crm_bling') {
+      setActiveTab('settings');
+      blingExchangeCode(code);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── RENDER SETTINGS ─────────────────────────────────────────────────────────
+  const renderSettings = () => (
+    <div className="space-y-6">
+      {/* Header info */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+            <Settings className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="font-bold text-slate-800">Configurações do Sistema</h2>
+            <p className="text-xs text-slate-400">Integrações e preferências do CRM</p>
+          </div>
+        </div>
+
+        {/* Bling Section */}
+        <div className="border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-800 to-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center font-bold text-white text-sm shadow-md">
+                B
+              </div>
+              <div>
+                <p className="font-bold text-white text-sm">Integração Bling ERP</p>
+                <p className="text-[10px] text-slate-300">API v3 • OAuth 2.0 • Importação de Contatos</p>
+              </div>
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold ${
+              blingConfig.connected ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-600/50 text-slate-300 border border-slate-500/30'
+            }`}>
+              {blingConfig.connected ? <><CheckCheck className="w-3.5 h-3.5" />Conectado</> : <><XCircle className="w-3.5 h-3.5" />Não conectado</>}
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Instruções */}
+            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+              <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <div className="text-xs text-blue-700 space-y-1">
+                <p className="font-bold">Como configurar a integração:</p>
+                <ol className="list-decimal pl-4 space-y-1 text-blue-600">
+                  <li>Acesse seu <strong>Bling</strong> → Preferências → Configurações → Cadastro de Aplicativos</li>
+                  <li>Crie um novo aplicativo (ou edite o existente)</li>
+                  <li>No campo <strong>"URL de Redirecionamento"</strong> do Bling, cole <strong>exatamente</strong> a URL mostrada abaixo</li>
+                  <li>Copie o <strong>Client ID</strong> e <strong>Client Secret</strong>, cole nos campos abaixo e clique em <strong>Conectar ao Bling</strong></li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Redirect URI — MAIS IMPORTANTE */}
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <label className="flex items-center gap-1.5 text-xs font-bold text-amber-800 mb-2">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                URL de Redirecionamento — cadastre esta URL exata no Bling
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={blingConfig.redirectUri}
+                  onChange={e => setBlingConfig(p => ({ ...p, redirectUri: e.target.value }))}
+                  className="flex-1 rounded-xl border border-amber-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-50 font-mono transition-all"
+                />
+                <motion.button
+                  onClick={() => {
+                    navigator.clipboard.writeText(blingConfig.redirectUri);
+                    setBlingCopied(true);
+                    setTimeout(() => setBlingCopied(false), 2000);
+                  }}
+                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    blingCopied
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-amber-500 text-white hover:bg-amber-600'
+                  }`}
+                >
+                  {blingCopied ? <><CheckCheck className="w-3.5 h-3.5" />Copiado!</> : <><Copy className="w-3.5 h-3.5" />Copiar</>}
+                </motion.button>
+              </div>
+              <p className="text-[10px] text-amber-700 mt-2">
+                ⚠️ A URL cadastrada no Bling deve ser <strong>idêntica</strong> a esta. Qualquer diferença (barra no final, http vs https, etc.) causa o erro <code className="bg-amber-100 px-1 rounded">redirect_uri_mismatch</code>.
+              </p>
+            </div>
+
+            {/* Credenciais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 mb-1.5">
+                  <KeyRound className="w-3.5 h-3.5" />Client ID
+                </label>
+                <input
+                  type="text"
+                  value={blingConfig.clientId}
+                  onChange={e => setBlingConfig(p => ({ ...p, clientId: e.target.value }))}
+                  placeholder="Cole seu Client ID aqui..."
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all bg-white"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 mb-1.5">
+                  <Lock className="w-3.5 h-3.5" />Client Secret
+                </label>
+                <input
+                  type="password"
+                  value={blingConfig.clientSecret}
+                  onChange={e => setBlingConfig(p => ({ ...p, clientSecret: e.target.value }))}
+                  placeholder="Cole seu Client Secret aqui..."
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <motion.button
+                onClick={() => saveBlingConfig(blingConfig)}
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all shadow-sm"
+              >
+                <Save className="w-4 h-4" />Salvar Credenciais
+              </motion.button>
+              <motion.button
+                onClick={blingAuthorize}
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 transition-all shadow-sm"
+              >
+                <ExternalLink className="w-4 h-4" />Conectar ao Bling (OAuth)
+              </motion.button>
+              {blingConfig.connected && (
+                <motion.button
+                  onClick={() => saveBlingConfig({ ...blingConfig, accessToken: '', refreshToken: '', connected: false })}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-sm font-semibold hover:bg-rose-100 transition-all"
+                >
+                  <XCircle className="w-4 h-4" />Desconectar
+                </motion.button>
+              )}
+            </div>
+
+            {/* Seção de Importação */}
+            {blingConfig.connected && (
+              <div className="border-t border-slate-100 pt-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                      <Download className="w-4 h-4 text-indigo-600" />Importar Clientes do Bling
+                    </h4>
+                    <p className="text-xs text-slate-400 mt-0.5">Busca todos os contatos pessoa jurídica cadastrados no Bling e importa para o CRM.</p>
+                  </div>
+                  {blingImportStatus === 'idle' || blingImportStatus === 'error' ? (
+                    <motion.button
+                      onClick={blingStartImport}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-all shadow-sm"
+                    >
+                      <Download className="w-4 h-4" />Iniciar Importação
+                    </motion.button>
+                  ) : blingImportStatus === 'success' ? (
+                    <motion.button
+                      onClick={() => setBlingImportStatus('idle')}
+                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-semibold hover:bg-emerald-100 transition-all"
+                    >
+                      <RefreshCw className="w-4 h-4" />Importar Novamente
+                    </motion.button>
+                  ) : null}
+                </div>
+
+                {/* Status de importação */}
+                <AnimatePresence mode="wait">
+                  {blingImportStatus === 'loading' && (
+                    <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                      <motion.div className="w-5 h-5 border-2 border-indigo-400/30 border-t-indigo-600 rounded-full"
+                        animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} />
+                      <p className="text-sm font-semibold text-indigo-700">Buscando contatos no Bling...</p>
+                    </motion.div>
+                  )}
+
+                  {blingImportStatus === 'importing' && (
+                    <motion.div key="importing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                      <motion.div className="w-5 h-5 border-2 border-amber-400/30 border-t-amber-600 rounded-full"
+                        animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} />
+                      <p className="text-sm font-semibold text-amber-700">Importando clientes para o CRM... Aguarde.</p>
+                    </motion.div>
+                  )}
+
+                  {blingImportStatus === 'success' && (
+                    <motion.div key="success" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-emerald-800">Importação concluída com sucesso!</p>
+                        <p className="text-xs text-emerald-600">{blingImportCount} cliente(s) importado(s) do Bling para o CRM.</p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {blingImportStatus === 'error' && (
+                    <motion.div key="error" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-3 p-4 bg-rose-50 border border-rose-200 rounded-xl">
+                      <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-rose-800">Erro na importação</p>
+                        <p className="text-xs text-rose-600">{blingImportError}</p>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {blingImportStatus === 'preview' && blingPreviewClients.length > 0 && (
+                    <motion.div key="preview" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-amber-600" />
+                          <div>
+                            <p className="text-sm font-bold text-amber-800">Prévia da importação</p>
+                            <p className="text-xs text-amber-700">{blingPreviewClients.length} contato(s) encontrado(s) na 1ª página. Confirme para importar todos.</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setBlingImportStatus('idle')}
+                            className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">Cancelar</button>
+                          <motion.button onClick={blingConfirmImport}
+                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm">
+                            <Download className="w-3.5 h-3.5" />Confirmar Importação
+                          </motion.button>
+                        </div>
+                      </div>
+
+                      {/* Tabela preview */}
+                      <div className="border border-slate-200 rounded-xl overflow-hidden">
+                        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Visualização dos primeiros {Math.min(10, blingPreviewClients.length)} registros</p>
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                          {blingPreviewClients.slice(0, 10).map((c, i) => (
+                            <div key={i} className="flex items-center gap-4 px-4 py-3 hover:bg-slate-50 transition-all">
+                              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs shrink-0">
+                                {(c.name || '?')[0]?.toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-slate-800 truncate">{c.name || '—'}</p>
+                                <p className="text-xs text-slate-400 truncate">{c.email || c.phone || 'Sem contato'}</p>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full whitespace-nowrap">Tier C</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {blingImportStatus === 'preview' && blingPreviewClients.length === 0 && (
+                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <Users className="w-5 h-5 text-slate-400" />
+                      <p className="text-sm text-slate-600">Nenhum contato pessoa jurídica encontrado no Bling.</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Outras configurações futuras */}
+      <div className="bg-white rounded-2xl border border-slate-200/60 p-6">
+        <h3 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+          <Link className="w-4 h-4 text-slate-400" />Outras Integrações
+        </h3>
+        <div className="flex flex-wrap gap-3">
+          {['WhatsApp Business API', 'Google Sheets', 'RD Station', 'HubSpot'].map(name => (
+            <div key={name} className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 font-semibold">
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />{name} <span className="text-slate-300">• Em breve</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   const NAV = [
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'matrix' as Tab, label: 'Matriz Prioridade', icon: Target },
     { id: 'nurture' as Tab, label: 'Nutrição Inteligente', icon: Zap },
     { id: 'clients' as Tab, label: 'Clientes', icon: Users },
     { id: 'pipeline' as Tab, label: 'CRM', icon: GitMerge },
+    { id: 'settings' as Tab, label: 'Configurações', icon: Settings },
   ];
 
-  const TAB_TITLES = {
+  const TAB_TITLES: Record<Tab, string> = {
     dashboard: 'Visão Geral',
     matrix: 'Matriz de Prioridade',
     nurture: 'Nutrição Inteligente',
     clients: 'Gestão de Clientes',
-    pipeline: 'Processo CRM'
+    pipeline: 'Processo CRM',
+    settings: 'Configurações'
   };
 
-  const TAB_SUBS = {
+  const TAB_SUBS: Record<Tab, string> = {
     dashboard: 'KPIs e alertas da sua carteira',
     matrix: 'Onde VOCÊ entra para fechar grandes contas',
     nurture: 'Ganchos de valor baseados nas dores do cliente',
     clients: 'Segmentação: Perfil · Comportamento · Potencial',
-    pipeline: 'Acompanhamento do processo comercial'
+    pipeline: 'Acompanhamento do processo comercial',
+    settings: 'Integrações e preferências do sistema'
   };
 
   return (
@@ -1258,6 +1746,7 @@ export default function App() {
                 {activeTab === 'nurture' && renderNurture()}
                 {activeTab === 'clients' && renderClients()}
                 {activeTab === 'pipeline' && renderPipeline()}
+                {activeTab === 'settings' && renderSettings()}
               </motion.div>
             </AnimatePresence>
           </main>
