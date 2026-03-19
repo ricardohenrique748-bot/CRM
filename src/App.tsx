@@ -1278,8 +1278,9 @@ export default function App() {
     // Salva as credenciais antes de redirecionar para garantir que estejam disponíveis ao retornar
     saveBlingConfig(blingConfig);
     const redirectUri = encodeURIComponent(blingConfig.redirectUri);
-    const scope = encodeURIComponent('92345');
-    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${blingConfig.clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=crm_bling`;
+    // NOTA: O Bling NÃO usa parâmetro scope na URL — os escopos são definidos
+    // no cadastro do aplicativo em: Bling → Central de Extensões → Área do Integrador → editar app → Lista de escopos
+    const url = `https://www.bling.com.br/Api/v3/oauth/authorize?response_type=code&client_id=${blingConfig.clientId}&redirect_uri=${redirectUri}&state=crm_bling`;
     window.location.href = url;
   };
 
@@ -1557,9 +1558,10 @@ export default function App() {
               <div className="text-xs text-blue-700 space-y-1">
                 <p className="font-bold">Como configurar a integração:</p>
                 <ol className="list-decimal pl-4 space-y-1 text-blue-600">
-                  <li>Acesse seu <strong>Bling</strong> → Preferências → Configurações → Cadastro de Aplicativos</li>
-                  <li>Crie um novo aplicativo (ou edite o existente)</li>
-                  <li>No campo <strong>"URL de Redirecionamento"</strong> do Bling, cole <strong>exatamente</strong> a URL mostrada abaixo</li>
+                  <li>Acesse seu <strong>Bling</strong> → <strong>Preferências</strong> → <strong>Central de Extensões</strong> → <strong>Área do Integrador</strong></li>
+                  <li>Crie ou edite seu aplicativo</li>
+                  <li>No campo <strong>"Link de redirecionamento"</strong> cole a URL exibida abaixo</li>
+                  <li className="text-rose-700 font-semibold">⚠️ Em <strong>"Lista de escopos"</strong> habilite: <strong>Contatos → Informações básicas → Visualizar</strong> (sem isso gera o erro <code>insufficient_scope</code>)</li>
                   <li>Copie o <strong>Client ID</strong> e <strong>Client Secret</strong>, cole nos campos abaixo e clique em <strong>Conectar ao Bling</strong></li>
                 </ol>
               </div>
