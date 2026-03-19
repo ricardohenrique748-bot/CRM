@@ -1240,33 +1240,31 @@ export default function App() {
     window.location.href = url;
   };
 
-  // Troca o authorization code pelo access token
+  // Troca o authorization code pelo access token via proxy serverless (evita CORS)
   const blingExchangeCode = async (code: string) => {
     setBlingImportStatus('loading');
     setBlingImportError('');
     try {
-      // Lê config salva do localStorage para garantir acesso após redirect
       let cfg = blingConfig;
       try {
         const saved = localStorage.getItem(BLING_STORAGE_KEY);
         if (saved) cfg = { ...cfg, ...JSON.parse(saved) };
-      } catch { /* usa blingConfig do estado */ }
+      } catch { /* usa blingConfig */ }
       
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new Error('Client ID ou Client Secret não encontrados para a troca do token.');
       }
 
-      const credentials = btoa(`${cfg.clientId}:${cfg.clientSecret}`);
-      const res = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+      // Usamos a rota /api/proxy-bling que criamos para contornar o CORS
+      const res = await fetch('/api/proxy-bling', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/x-www-form-urlencoded', 
-          'Authorization': `Basic ${credentials}` 
-        },
-        body: new URLSearchParams({ 
-          grant_type: 'authorization_code', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          grantType: 'authorization_code',
+          clientId: cfg.clientId,
+          clientSecret: cfg.clientSecret,
           code, 
-          redirect_uri: cfg.redirectUri || DEFAULT_REDIRECT_URI 
+          redirectUri: cfg.redirectUri || DEFAULT_REDIRECT_URI 
         })
       });
 
@@ -1281,7 +1279,6 @@ export default function App() {
       saveBlingConfig(newCfg);
       setBlingImportStatus('success'); 
       
-      // Limpa o código da URL discretamente
       const url = new URL(window.location.href);
       url.searchParams.delete('code'); url.searchParams.delete('state');
       window.history.replaceState({}, '', url.toString());
@@ -1295,18 +1292,26 @@ export default function App() {
   // Renova o access token usando o refresh token
   const blingRefreshToken = async (): Promise<string | null> => {
     try {
-      const credentials = btoa(`${blingConfig.clientId}:${blingConfig.clientSecret}`);
-      const res = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
+      const res = await fetch('/api/proxy-bling', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': `Basic ${credentials}` },
-        body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: blingConfig.refreshToken })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          grantType: 'refresh_token',
+          clientId: blingConfig.clientId,
+          clientSecret: blingConfig.clientSecret,
+          refreshToken: blingConfig.refreshToken
+        })
       });
-      if (!res.ok) throw new Error(`Erro ${res.status}`);
+      if (!res.ok) throw new Error('Falha ao renovar token');
       const data = await res.json();
       const newCfg = { ...blingConfig, accessToken: data.access_token, refreshToken: data.refresh_token, connected: true };
       saveBlingConfig(newCfg);
       return data.access_token;
-    } catch (e: any) { setBlingImportError('Falha ao renovar token: ' + e.message); return null; }
+    } catch (e: any) {
+      console.error('Erro ao renovar token Bling:', e);
+      setBlingImportError('Falha ao renovar token: ' + e.message);
+      return null;
+    }
   };
 
   // Busca clientes/contatos do Bling e converte para o formato do CRM
