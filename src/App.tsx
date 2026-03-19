@@ -511,7 +511,18 @@ const ClientModal = ({ client, onSave, onClose }: { client: Partial<Client> | nu
 
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 export default function App() {
-  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authUser, setAuthUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const { email, password } = JSON.parse(saved);
+        return USERS.find(u => u.email === email && u.password === password) || null;
+      }
+    } catch (e) {
+      console.error('Erro ao restaurar sessão:', e);
+    }
+    return null;
+  });
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [viewingTrack, setViewingTrack] = useState<Client | null>(null);
   const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
@@ -1747,7 +1758,10 @@ export default function App() {
             </div>
 
             <div className="p-3 border-t border-slate-100">
-              <button onClick={() => setAuthUser(null)}
+              <button onClick={() => {
+                localStorage.removeItem(STORAGE_KEY);
+                setAuthUser(null);
+              }}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all">
                 <LogOut className="w-3.5 h-3.5" />Sair do Sistema
               </button>
