@@ -1242,31 +1242,54 @@ export default function App() {
 
   // Troca o authorization code pelo access token
   const blingExchangeCode = async (code: string) => {
+    setBlingImportStatus('loading');
+    setBlingImportError('');
     try {
       // Lê config salva do localStorage para garantir acesso após redirect
       let cfg = blingConfig;
       try {
         const saved = localStorage.getItem(BLING_STORAGE_KEY);
-        if (saved) cfg = { redirectUri: DEFAULT_REDIRECT_URI, ...JSON.parse(saved) };
+        if (saved) cfg = { ...cfg, ...JSON.parse(saved) };
       } catch { /* usa blingConfig do estado */ }
+      
+      if (!cfg.clientId || !cfg.clientSecret) {
+        throw new Error('Client ID ou Client Secret não encontrados para a troca do token.');
+      }
+
       const credentials = btoa(`${cfg.clientId}:${cfg.clientSecret}`);
       const res = await fetch('https://www.bling.com.br/Api/v3/oauth/token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': `Basic ${credentials}` },
-        body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: cfg.redirectUri || DEFAULT_REDIRECT_URI })
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded', 
+          'Authorization': `Basic ${credentials}` 
+        },
+        body: new URLSearchParams({ 
+          grant_type: 'authorization_code', 
+          code, 
+          redirect_uri: cfg.redirectUri || DEFAULT_REDIRECT_URI 
+        })
       });
+
       if (!res.ok) {
-        const errTxt = await res.text().catch(() => res.status.toString());
-        throw new Error(`Erro ${res.status}: ${errTxt}`);
+        const errJson = await res.json().catch(() => ({}));
+        const errTxt = errJson.error_description || errJson.error || await res.text().catch(() => res.status.toString());
+        throw new Error(`Erro na API (${res.status}): ${errTxt}`);
       }
+
       const data = await res.json();
       const newCfg = { ...cfg, accessToken: data.access_token, refreshToken: data.refresh_token, connected: true };
       saveBlingConfig(newCfg);
-      // Limpa o código da URL
+      setBlingImportStatus('success'); 
+      
+      // Limpa o código da URL discretamente
       const url = new URL(window.location.href);
       url.searchParams.delete('code'); url.searchParams.delete('state');
       window.history.replaceState({}, '', url.toString());
-    } catch (e: any) { setBlingImportError('Falha ao trocar code por token: ' + e.message); }
+    } catch (e: any) { 
+      console.error('Bling Exchange Error:', e);
+      setBlingImportError(e.message); 
+      setBlingImportStatus('error');
+    }
   };
 
   // Renova o access token usando o refresh token
