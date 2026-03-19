@@ -626,7 +626,7 @@ export default function App() {
     return matchSearch && matchTier && matchType;
   });
 
-  const mortoVivos = clients.filter(c => !c.potencialMapeado);
+
   const totalPotencial = clients.reduce((s, c) => s + c.potencialTotal, 0);
   const totalGap = clients.reduce((s, c) => s + c.gapVenda, 0);
   const totalTicket = clients.reduce((s, c) => s + c.ticketMedio, 0);
@@ -635,25 +635,10 @@ export default function App() {
   // ── DASHBOARD ─────────────────────────────────────────────────────────────
   const renderDashboard = () => (
     <div className="space-y-6">
-      {mortoVivos.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 p-4 rounded-2xl border border-amber-200 bg-amber-50">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-amber-800">⚠️ {mortoVivos.length} cliente{mortoVivos.length > 1 ? 's' : ''} "morto-vivo" no CRM</p>
-            <p className="text-xs text-amber-600 mt-0.5">Clientes sem potencial mapeado: {mortoVivos.map(c => c.name).join(', ')}</p>
-          </div>
-          <button onClick={() => { setActiveTab('clients'); setFilterTier('Todos'); }} className="text-xs font-bold text-amber-700 px-3 py-1.5 bg-amber-100 rounded-lg hover:bg-amber-200 transition-all">
-            Ver clientes →
-          </button>
-        </motion.div>
-      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Clientes Ativos', value: clients.length.toString(), icon: Users, color: '#6366f1', sub: `${mortoVivos.length} sem potencial` },
+          { label: 'Clientes Ativos', value: clients.length.toString(), icon: Users, color: '#6366f1', sub: 'Carteira total' },
           { label: 'Ticket Total/Mês', value: fmt(totalTicket), icon: DollarSign, color: '#10b981', sub: 'Carteira atual' },
           { label: 'Potencial Total', value: fmt(totalPotencial), icon: Target, color: '#3b82f6', sub: 'Carteira mapeada' },
           { label: 'Gap de Vendas', value: fmt(totalGap), icon: TrendingUp, color: '#f59e0b', sub: 'A capturar' },

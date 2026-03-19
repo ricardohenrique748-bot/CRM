@@ -19,7 +19,7 @@ export const DashboardView = ({ clients, setActiveTab, setFilterTier }: Dashboar
   const totalTicket = clients.reduce((s, c) => s + c.ticketMedio, 0);
   const totalPotencial = clients.reduce((s, c) => s + c.potencialTotal, 0);
   const totalGap = clients.reduce((s, c) => s + c.gapVenda, 0);
-  const mortoVivos = clients.filter(c => !c.potencialMapeado);
+
   
   const tierCounts = {
     A: clients.filter(c => c.tier === 'A').length,
@@ -46,28 +46,11 @@ export const DashboardView = ({ clients, setActiveTab, setFilterTier }: Dashboar
 
   return (
     <div className="space-y-6">
-      {/* Alerta Morto-Vivo */}
-      {mortoVivos.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 p-4 rounded-2xl border border-amber-200 bg-amber-50 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">⚠️ {mortoVivos.length} cliente{mortoVivos.length > 1 ? 's' : ''} "morto-vivo" detectado{mortoVivos.length > 1 ? 's' : ''}</p>
-            <p className="text-xs text-amber-600 mt-0.5 font-medium">Clientes sem potencial mapeado: {mortoVivos.slice(0, 3).map(c => c.name).join(', ')}{mortoVivos.length > 3 ? '...' : ''}</p>
-          </div>
-          <button onClick={() => { setActiveTab('clients'); setFilterTier('Todos'); }} 
-            className="text-xs font-bold text-amber-700 px-4 py-2 bg-white border border-amber-200 rounded-xl hover:bg-amber-100 transition-all shadow-sm">
-            Mapear Potencial →
-          </button>
-        </motion.div>
-      )}
 
       {/* Mini Cards Principais */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Clientes Ativos', value: clients.length.toString(), icon: Users, color: '#6366f1', sub: `${mortoVivos.length} aguardando` },
+          { label: 'Clientes Ativos', value: clients.length.toString(), icon: Users, color: '#6366f1', sub: 'Carteira total' },
           { label: 'Ticket Total/Mês', value: fmt(totalTicket), icon: DollarSign, color: '#10b981', sub: 'Carteira atual' },
           { label: 'Potencial Total', value: fmt(totalPotencial), icon: Target, color: '#3b82f6', sub: 'Carteira mapeada' },
           { label: 'Gap de Vendas', value: fmt(totalGap), icon: TrendingUp, color: '#f59e0b', sub: 'A capturar' },
