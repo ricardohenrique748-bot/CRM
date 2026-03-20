@@ -1354,7 +1354,7 @@ export default function App() {
   };
 
   // Função auxiliar para buscar resumo de vendas (ticket médio e última compra)
-  const fetchBlingSalesSummary = async (months = 12): Promise<Map<string, { total: number; count: number; lastDate: string }>> => {
+  const fetchBlingSalesSummary = async (months = 24): Promise<Map<string, { total: number; count: number; lastDate: string }>> => {
     const salesMap = new Map<string, { total: number; count: number; lastDate: string }>();
     const dateLimit = new Date();
     dateLimit.setMonth(dateLimit.getMonth() - months);
@@ -1365,7 +1365,7 @@ export default function App() {
     let hasMore = true;
 
     try {
-      while (hasMore && page <= 5) { // Limitado a 5 páginas (500 pedidos) para performance inicial
+      while (hasMore && page <= 10) { // Aumentado para 10 páginas (1000 pedidos)
         const doFetch = async (tkn: string) => fetch('/api/proxy-bling', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1426,7 +1426,7 @@ export default function App() {
     if (res.status === 401 || res.status === 403) {
       const refreshed = await blingRefreshToken();
       if (!refreshed) {
-        // A mensagem já foi setada pelo blingRefreshToken, apenas re-lança
+        // A mensagem já foi setada pelo blingImportError, apenas re-lança
         throw new Error(blingImportError || 'Token expirado. Reconecte ao Bling.');
       }
       token = refreshed;
@@ -1452,22 +1452,45 @@ export default function App() {
       const blingId = String(c.id || '');
       const sales = salesMap?.get(blingId) || { total: 0, count: 0, lastDate: '' };
       
-      const totalAnual = sales.total;
-      const ticketMedio = Math.round(totalAnual / 12); // Gasto médio mensal nos últimos 12 meses
+      const totalPeriodo = sales.total;
+      const ticketMedio = Math.round(totalPeriodo / 12); // Mantemos média mensal estimada em 12 meses
       
       // Inteligência de mapeamento sofisticada
       let type: ClientType = 'Frotista';
       if (c.tipo === 'F') type = 'Autônomo';
-      else if (totalAnual > 150000) type = 'Indústria';
-      else if (c.situacao === 'A' && totalAnual > 50000 && c.tipo === 'J') type = 'Frotista';
+      else if (totalPeriodo > 150000) type = 'Indústria';
+      else if (c.situacao === 'A' && totalPeriodo > 50000 && c.tipo === 'J') type = 'Frotista';
       else if (c.contatosFechamento?.length > 0) type = 'Revenda'; 
 
       let size: 'Pequeno' | 'Médio' | 'Grande' = 'Médio';
-      if (totalAnual > 300000) size = 'Grande';
-      else if (totalAnual < 40000) size = 'Pequeno';
+      if (totalPeriodo > 300000) size = 'Grande';
+      else if (totalPeriodo < 40000) size = 'Pequeno';
 
-      const potencialTotal = Math.max(totalAnual * 1.4, ticketMedio * 18); // Estima potencial 40% acima do atual ou 18 meses de ticket
-      const gapVenda = Math.max(0, potencialTotal - totalAnual);
+      const potencialTotal = Math.max(totalPeriodo * 1.4, ticketMedio * 18); // Estima potencial 40% acima do atual ou 18 meses de ticket
+      const gapVenda = Math.max(0, potencialTotal - totalPeriodo);
+
+      // Extração robusta de CNPJ/CPF (pode estar no numeroDocumento, codigo ou embutido no nome)
+      let doc = String(c.numeroDocumento || '').replace(/\D/g, '');
+      if (!doc || doc.length < 11) {
+        // Tenta extrair do nome se o nome começar com uma sequência longa de dígitos
+        const match = (c.nome || '').match(/^(\d{11,14})/);
+        if (match) doc = match[1];
+      }
+      
+      // Se ainda não tem, tenta o campo codigo (alguns sistemas salvam o CNPJ no código)
+      if ((!doc || doc.length < 11) && c.codigo && c.codigo.length >= 11) {
+        doc = String(c.codigo).replace(/\D/g, '');
+      }
+
+      // Limpeza de telefone
+      const clearPhone = (p: string) => p ? p.replace(/[^0-9]/g, '') : '';
+      let phone = clearPhone(c.celular) || clearPhone(c.telefone) || clearPhone(c.fone) || '';
+      if (phone.length >= 10) {
+        // Formata minimamente se tiver sucesso
+        phone = phone.length === 11 
+          ? `(${phone.substring(0,2)}) ${phone.substring(2,7)}-${phone.substring(7)}`
+          : `(${phone.substring(0,2)}) ${phone.substring(2,6)}-${phone.substring(6)}`;
+      }
 
       // Heurística de Mix baseada no perfil
       const mixByPage: Record<ClientType, string> = {
@@ -1487,7 +1510,7 @@ export default function App() {
       return {
         name: c.nome || c.razaoSocial || '',
         contact: c.fantasia || c.nome || '',
-        phone: (c.telefone || '').replace(/[^0-9()+\- ]/g, '') || (c.celular || '').replace(/[^0-9()+\- ]/g, ''),
+        phone: phone,
         email: c.email || '',
         type,
         size,
