@@ -6,7 +6,7 @@ export type ClientSize = 'Pequeno' | 'Médio' | 'Grande';
 export type Complexity = 'Baixa' | 'Média' | 'Alta';
 export type Frequency = 'Semanal' | 'Mensal' | 'Trimestral' | 'Irregular';
 export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
-export type ViewMode = 'Pipeline' | 'Nutrição' | 'Configurações';
+export type ViewMode = 'Dashboard' | 'Pipeline' | 'Nutrição' | 'Análise' | 'Configurações';
 export type Tab = 'dashboard' | 'clients' | 'pipeline' | 'matrix' | 'nurture' | 'settings';
 
 export interface Client {

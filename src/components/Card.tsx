@@ -8,9 +8,10 @@ import { fmt, sendWhatsApp } from '../utils';
 interface CardProps {
   client: Client;
   onClick: () => void;
+  key?: string | number;
 }
 
-export const Card: React.FC<CardProps> = ({ client, onClick }) => {
+export const Card = ({ client, onClick }: CardProps) => {
   const tierStyle = TIER_COLORS[client.tier];
 
   return (

@@ -9,6 +9,8 @@ import { Card } from './components/Card';
 import { ClientModal } from './components/ClientModal';
 import { NurtureView } from './components/NurtureView';
 import { SettingsView } from './components/SettingsView';
+import { DashboardView } from './components/DashboardView';
+import { MatrixView } from './components/MatrixView';
 import { INITIAL_CLIENTS } from './mockData';
 import { STAGES } from './constants';
 import { Client, ViewMode } from './types';
@@ -16,7 +18,7 @@ import { calculateScore, assignTierFromScore } from './utils';
 
 const App = () => {
   const [clients, setClients] = React.useState<Client[]>(INITIAL_CLIENTS);
-  const [activeTab, setActiveTab] = React.useState<ViewMode>('Pipeline');
+  const [activeTab, setActiveTab] = React.useState<ViewMode>('Dashboard');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [selectedClient, setSelectedClient] = React.useState<Client | null>(null);
@@ -93,8 +95,14 @@ const App = () => {
         </div>
         
         <div className="flex-1 space-y-4">
-          {(['Pipeline', 'Nutrição', 'Configurações'] as ViewMode[]).map(tab => {
-            const icons = { Pipeline: LayoutGrid, Nutrição: Zap, Configurações: SettingsIcon };
+          {(['Dashboard', 'Pipeline', 'Nutrição', 'Análise', 'Configurações'] as ViewMode[]).map(tab => {
+            const icons = { 
+              Dashboard: BarChart3,
+              Pipeline: LayoutGrid, 
+              Nutrição: Zap, 
+              Análise: Target,
+              Configurações: SettingsIcon 
+            };
             const Icon = icons[tab];
             return (
               <button
@@ -150,6 +158,12 @@ const App = () => {
 
         {/* Dashboard Content */}
         <div className="px-12">
+          {activeTab === 'Dashboard' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <DashboardView clients={clients} />
+            </div>
+          )}
+
           {activeTab === 'Pipeline' && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
               {/* Stats Bar */}
@@ -212,6 +226,12 @@ const App = () => {
           {activeTab === 'Nutrição' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                <NurtureView clients={clients} onEditClient={handleEditClient} />
+            </div>
+          )}
+
+          {activeTab === 'Análise' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <MatrixView clients={clients} />
             </div>
           )}
 
