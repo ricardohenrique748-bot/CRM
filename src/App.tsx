@@ -1353,8 +1353,64 @@ export default function App() {
     }
   };
 
+  // Função auxiliar para buscar resumo de vendas (ticket médio e última compra)
+  const fetchBlingSalesSummary = async (months = 12): Promise<Map<string, { total: number; count: number; lastDate: string }>> => {
+    const salesMap = new Map<string, { total: number; count: number; lastDate: string }>();
+    const dateLimit = new Date();
+    dateLimit.setMonth(dateLimit.getMonth() - months);
+    const dateStr = dateLimit.toISOString().split('T')[0];
+
+    let token = blingConfig.accessToken;
+    let page = 1;
+    let hasMore = true;
+
+    try {
+      while (hasMore && page <= 5) { // Limitado a 5 páginas (500 pedidos) para performance inicial
+        const doFetch = async (tkn: string) => fetch('/api/proxy-bling', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            proxyUrl: `https://www.bling.com.br/Api/v3/pedidos/vendas?pagina=${page}&limite=100&dataInicial=${dateStr}`,
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${tkn}`, 'Accept': 'application/json' }
+          })
+        });
+
+        let res = await doFetch(token);
+        if (res.status === 401 || res.status === 403) {
+          const refreshed = await blingRefreshToken();
+          if (!refreshed) break;
+          token = refreshed;
+          res = await doFetch(token);
+        }
+
+        if (!res.ok) break;
+        const json = await res.json();
+        const sales = json.data || [];
+        if (sales.length === 0) { hasMore = false; break; }
+
+        for (const s of sales) {
+          const clientId = String(s.contato?.id || '');
+          if (!clientId) continue;
+          const val = Number(s.total || 0);
+          const date = s.data || '';
+          
+          const current = salesMap.get(clientId) || { total: 0, count: 0, lastDate: '' };
+          current.total += val;
+          current.count += 1;
+          if (!current.lastDate || date > current.lastDate) current.lastDate = date;
+          salesMap.set(clientId, current);
+        }
+        page++;
+      }
+    } catch (e) {
+      console.warn('Erro ao buscar vendas do Bling:', e);
+    }
+    return salesMap;
+  };
+
   // Busca clientes/contatos do Bling e converte para o formato do CRM
-  const blingFetchContacts = async (page = 1): Promise<Partial<Client>[]> => {
+  const blingFetchContacts = async (page = 1, salesMap?: Map<string, any>): Promise<Partial<Client>[]> => {
     let token = blingConfig.accessToken;
     const doFetch = async (tkn: string) => fetch('/api/proxy-bling', {
       method: 'POST',
@@ -1391,26 +1447,75 @@ export default function App() {
     }
     const json = await res.json();
     const contatos = json.data || [];
-    return contatos.map((c: any): Partial<Client> => ({
-      name: c.nome || c.razaoSocial || '',
-      contact: c.fantasia || c.nome || '',
-      phone: (c.telefone || '').replace(/[^0-9()+\- ]/g, ''),
-      email: c.email || '',
-      type: 'Frotista',
-      size: 'Médio',
-      ticketMedio: 0, margem: 0, complexidade: 'Média',
-      frequencia: 'Mensal', mix: '',
-      sensibilidadePreco: 'Média', dependenciaOp: 'Média',
-      potencialTotal: 0, gapVenda: 0,
-      crossSell: '', upsell: '',
-      potencialMapeado: false, tier: 'C', score: 0,
-      ultimaInteracao: new Date().toISOString().split('T')[0], notas: `Importado do Bling.`,
-      riscoOp: 'Baixa', relacEstrategico: 'Baixa',
-      nurtureStep: 0, pipelineStage: 0,
-      cnpj: c.codigo || c.numeroDocumento || '',
-      lastPurchaseDate: '',
-      blingId: String(c.id || '')
-    }));
+
+    return contatos.map((c: any): Partial<Client> => {
+      const blingId = String(c.id || '');
+      const sales = salesMap?.get(blingId) || { total: 0, count: 0, lastDate: '' };
+      
+      const totalAnual = sales.total;
+      const ticketMedio = Math.round(totalAnual / 12); // Gasto médio mensal nos últimos 12 meses
+      
+      // Inteligência de mapeamento sofisticada
+      let type: ClientType = 'Frotista';
+      if (c.tipo === 'F') type = 'Autônomo';
+      else if (totalAnual > 150000) type = 'Indústria';
+      else if (c.situacao === 'A' && totalAnual > 50000 && c.tipo === 'J') type = 'Frotista';
+      else if (c.contatosFechamento?.length > 0) type = 'Revenda'; 
+
+      let size: 'Pequeno' | 'Médio' | 'Grande' = 'Médio';
+      if (totalAnual > 300000) size = 'Grande';
+      else if (totalAnual < 40000) size = 'Pequeno';
+
+      const potencialTotal = Math.max(totalAnual * 1.4, ticketMedio * 18); // Estima potencial 40% acima do atual ou 18 meses de ticket
+      const gapVenda = Math.max(0, potencialTotal - totalAnual);
+
+      // Heurística de Mix baseada no perfil
+      const mixByPage: Record<ClientType, string> = {
+        'Frotista': 'Pneus de Carga, Recapagem e Gestão de KM',
+        'Indústria': 'Pneus Fora de Estrada e Serviços Industriais',
+        'Agro': 'Pneus Agrícolas e Manutenção de Campo',
+        'Revenda': 'Atacado de Carcaças e Pneus Novos',
+        'Autônomo': 'Pneus de Passeio/Carga e Serviços Rápidos'
+      };
+
+      // Heurística de frequência
+      let frequencia: Client['frequencia'] = 'Mensal';
+      if (sales.count > 12) frequencia = 'Semanal';
+      else if (sales.count < 4 && sales.count > 0) frequencia = 'Trimestral';
+      else if (sales.count === 0) frequencia = 'Irregular';
+
+      return {
+        name: c.nome || c.razaoSocial || '',
+        contact: c.fantasia || c.nome || '',
+        phone: (c.telefone || '').replace(/[^0-9()+\- ]/g, '') || (c.celular || '').replace(/[^0-9()+\- ]/g, ''),
+        email: c.email || '',
+        type,
+        size,
+        ticketMedio,
+        margem: type === 'Indústria' ? 28 : (type === 'Revenda' ? 15 : 22), 
+        complexidade: size === 'Grande' ? 'Alta' : 'Média',
+        frequencia,
+        mix: mixByPage[type] || 'Pneus e Serviços',
+        sensibilidadePreco: size === 'Grande' ? 'Baixa' : 'Média',
+        dependenciaOp: size === 'Grande' ? 'Alta' : 'Média',
+        potencialTotal,
+        gapVenda,
+        crossSell: type === 'Frotista' ? 'Sistema de Monitoramento e Recap' : 'Contrato de Manutenção',
+        upsell: size === 'Grande' ? 'Gestão de Frotas Premium' : 'Upgrade de Categoria de Pneu',
+        potencialMapeado: totalAnual > 0,
+        tier: 'C', // Será recalculado no confirm
+        score: 0,
+        ultimaInteracao: new Date().toISOString().split('T')[0],
+        notas: `Importado do Bling. Histórico 12m: ${sales.count} pedidos, total faturado ${fmt(totalAnual)}.`,
+        riscoOp: 'Baixa',
+        relacEstrategico: totalAnual > 100000 ? 'Alta' : (totalAnual > 30000 ? 'Média' : 'Baixa'),
+        nurtureStep: 0,
+        pipelineStage: 0,
+        cnpj: c.numeroDocumento || c.codigo || '',
+        lastPurchaseDate: sales.lastDate,
+        blingId
+      };
+    });
   };
 
   // Preview de importação
@@ -1418,7 +1523,8 @@ export default function App() {
     setBlingImportStatus('loading');
     setBlingImportError('');
     try {
-      const first = await blingFetchContacts(1);
+      const salesMap = await fetchBlingSalesSummary(12);
+      const first = await blingFetchContacts(1, salesMap);
       setBlingPreviewClients(first);
       setBlingImportStatus('preview');
       setBlingPage(1);
@@ -1438,10 +1544,11 @@ export default function App() {
       // Armazena como string para comparar corretamente com blingId (que também é string)
       const existingBlingIds = new Set<string>(existingIds?.map(i => String(i.bling_id)).filter(id => id && id !== 'null') || []);
 
+      const salesMap = await fetchBlingSalesSummary(12);
       let page = 1;
       let hasMore = true;
       while (hasMore) {
-        const batch = await blingFetchContacts(page);
+        const batch = await blingFetchContacts(page, salesMap);
         if (batch.length === 0) { hasMore = false; break; }
         for (const raw of batch) {
           const c = raw as Client;
