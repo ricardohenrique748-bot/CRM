@@ -1,40 +1,30 @@
-// src/types/index.ts
+import { LucideIcon } from 'lucide-react';
 
 export type ClientType = 'Frotista' | 'Indústria' | 'Agro' | 'Revenda' | 'Autônomo';
 export type ClientSize = 'Pequeno' | 'Médio' | 'Grande';
 export type Complexity = 'Baixa' | 'Média' | 'Alta';
 export type Frequency = 'Semanal' | 'Mensal' | 'Trimestral' | 'Irregular';
-export type Tier = 'A' | 'B' | 'C';
+export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
+export type ViewMode = 'Pipeline' | 'Nutrição' | 'Configurações';
 export type Tab = 'dashboard' | 'clients' | 'pipeline' | 'matrix' | 'nurture' | 'settings';
 
 export interface Client {
-  id: number;
+  id: string;
   name: string;
-  contact: string;
-  phone: string;
+  contato: string;
+  whatsapp: string;
   email: string;
   type: ClientType;
   size: ClientSize;
   ticketMedio: number;
-  margem: number;
-  complexidade: Complexity;
-  frequencia: Frequency;
-  mix: string;
-  sensibilidadePreco: Complexity;
-  dependenciaOp: Complexity;
-  potencialTotal: number;
-  gapVenda: number;
-  crossSell: string;
-  upsell: string;
-  potencialMapeado: boolean;
-  tier: Tier;
-  score: number;
-  ultimaInteracao: string;
-  notas: string;
-  riscoOp: Complexity;
-  relacEstrategico: Complexity;
-  nurtureStep: number;
+  frequencia: number;
   pipelineStage: number;
+  score: number;
+  tier: Tier;
+  ultimaInteracao: string;
+  nurtureActive: boolean;
+  nurtureStep: number;
+  notas: string;
 }
 
 export interface User {
@@ -50,4 +40,11 @@ export interface BlingConfig {
   refreshToken: string;
   connected: boolean;
   redirectUri: string;
+}
+
+export interface Stage {
+  label: string;
+  color: string;
+  icon: LucideIcon;
+  next: string;
 }

@@ -1,32 +1,16 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { 
-  Users, DollarSign, Target, TrendingUp, AlertTriangle, 
-  ArrowUpRight, ChevronRight, BarChart3, Clock, Award
-} from 'lucide-react';
-import { Client, Tier, Tab } from '../types';
-import { TIER_COLORS, TYPE_COLORS } from '../constants';
+import { TrendingUp } from 'lucide-react';
+import { Client } from '../types';
 import { fmt } from '../utils';
 import { Card } from './ui/Card';
 
 interface DashboardViewProps {
   clients: Client[];
-  setActiveTab: (tab: Tab) => void;
-  setFilterTier: (tier: string) => void;
 }
 
-export const DashboardView = ({ clients, setActiveTab, setFilterTier }: DashboardViewProps) => {
-  const totalTicket = clients.reduce((s, c) => s + c.ticketMedio, 0);
-  const totalPotencial = clients.reduce((s, c) => s + c.potencialTotal, 0);
-  const totalGap = clients.reduce((s, c) => s + c.gapVenda, 0);
-
-  
-  const tierCounts = {
-    A: clients.filter(c => c.tier === 'A').length,
-    B: clients.filter(c => c.tier === 'B').length,
-    C: clients.filter(c => c.tier === 'C').length,
-  };
-
+export const DashboardView = ({ clients }: DashboardViewProps) => {
+  // Pipeline data analysis
   const stages = [
     { id: 0, label: 'Prospectando', prob: 0.1, color: '#f1f5f9', text: '#64748b' },
     { id: 1, label: 'Qualificando', prob: 0.25, color: '#eff6ff', text: '#3b82f6' },
@@ -41,195 +25,174 @@ export const DashboardView = ({ clients, setActiveTab, setFilterTier }: Dashboar
     return { ...s, count: stageClients.length, value, weighted: value * s.prob };
   });
 
+  const totalPipeline = stagesData.reduce((acc, s) => acc + s.value, 0);
   const totalWeighted = stagesData.reduce((acc, s) => acc + s.weighted, 0);
-  const avgScore = clients.reduce((acc, c) => acc + (c.score || 0), 0) / (clients.length || 1);
+  const totalLeads = clients.length;
+  const avgScore = clients.reduce((acc, c) => acc + (c.score || 0), 0) / (totalLeads || 1);
 
   return (
-    <div className="space-y-6">
-
-      {/* Mini Cards Principais */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Clientes Ativos', value: clients.length.toString(), icon: Users, color: '#6366f1', sub: 'Carteira total' },
-          { label: 'Ticket Total/Mês', value: fmt(totalTicket), icon: DollarSign, color: '#10b981', sub: 'Carteira atual' },
-          { label: 'Potencial Total', value: fmt(totalPotencial), icon: Target, color: '#3b82f6', sub: 'Carteira mapeada' },
-          { label: 'Gap de Vendas', value: fmt(totalGap), icon: TrendingUp, color: '#f59e0b', sub: 'A capturar' },
-        ].map((s, i) => (
-          <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-            className="bg-white rounded-3xl border border-slate-200/60 p-5 hover:shadow-lg transition-all group relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100" style={{ background: s.color }}>
-                <s.icon className="w-5 h-5" />
-              </div>
-              <div className="text-[10px] font-black text-slate-300 uppercase group-hover:text-slate-400 transition-colors">Indicador</div>
-            </div>
-            <p className="text-2xl font-black text-slate-800 tabular-nums">{s.value}</p>
-            <div className="flex items-center gap-1.5 mt-1">
-              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{s.label}</p>
-            </div>
-            <p className="text-[10px] text-slate-400 font-medium mt-1.5 flex items-center gap-1">
-              <div className="w-1 h-1 rounded-full bg-slate-200" /> {s.sub}
-            </p>
-          </motion.div>
-        ))}
+    <div className="space-y-8">
+      {/* Top summary cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
+          <p className="text-slate-500 text-sm font-bold uppercase tracking-tight mb-2">Valor Total Pipeline</p>
+          <p className="text-3xl font-black text-slate-900">{fmt(totalPipeline)}</p>
+          <div className="mt-2 flex items-center gap-2 text-emerald-600 font-bold text-xs bg-emerald-50 w-fit px-2 py-0.5 rounded-full">
+            <TrendingUp className="w-3 h-3" /> +12.5% vs mês ant.
+          </div>
+        </div>
+        <div className="bg-indigo-600 p-6 rounded-3xl shadow-indigo-200 shadow-xl text-white">
+          <p className="text-indigo-100 text-sm font-bold uppercase tracking-tight mb-2">Previsão Ponderada</p>
+          <p className="text-3xl font-black">{fmt(totalWeighted)}</p>
+          <p className="mt-2 text-indigo-200 text-xs font-medium italic opacity-80">*Baseado na probabilidade por estágio</p>
+        </div>
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
+          <p className="text-slate-500 text-sm font-bold uppercase tracking-tight mb-2">Taxa de Conversão Est.</p>
+          <p className="text-3xl font-black text-slate-900">22.4%</p>
+          <p className="mt-2 text-slate-400 text-xs font-medium">Médio do segmento: 18%</p>
+        </div>
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
+          <p className="text-slate-500 text-sm font-bold uppercase tracking-tight mb-2">Score Médio Carteira</p>
+          <p className="text-3xl font-black text-slate-900">{avgScore.toFixed(0)}</p>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3">
+            <div 
+              className={`h-full rounded-full transition-all ${avgScore > 70 ? 'bg-emerald-500' : avgScore > 40 ? 'bg-indigo-500' : 'bg-rose-500'}`} 
+              style={{ width: `${avgScore}%` }} 
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Inteligência de Tiers */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {(['A', 'B', 'C'] as Tier[]).map(t => {
-          const tc = TIER_COLORS[t];
-          const tclients = clients.filter(c => c.tier === t);
-          const tpot = tclients.reduce((s, c) => s + c.potencialTotal, 0);
-          const labels = { A: 'Key Accounts — Alta prioridade', B: 'Crescimento — Mid Touch', C: 'Volume — Low Touch / Automação' };
-          return (
-            <div key={t} className="bg-white rounded-3xl border p-5 hover:shadow-md transition-all relative border-slate-200/60" style={{ borderLeft: `6px solid ${tc.text}` }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shadow-sm" style={{ background: tc.bg, color: tc.text, border: `1px solid ${tc.border}` }}>
-                    {t}
-                  </span>
-                  <div>
-                    <p className="text-sm font-black text-slate-800 uppercase tracking-tighter">Tier {t}</p>
-                    <p className="text-[10px] text-slate-500 font-bold">{tierCounts[t]} cliente{tierCounts[t] !== 1 ? 's' : ''}</p>
+      {/* Funnel chart section */}
+      <div className="bg-white rounded-[2.5rem] border border-slate-200/60 p-8 shadow-sm">
+        <div className="flex justify-between items-center mb-10">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Visualização do Funil (Pipeline V2)</h2>
+            <p className="text-sm text-slate-500 font-medium">Fluxo de receita e volume de leads por estágio comercial</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {stagesData.map((s, idx) => {
+            const maxVal = Math.max(...stagesData.map(st => st.value));
+            const widthPerc = maxVal > 0 ? (s.value / maxVal) * 100 : 0;
+            const dropPercent = idx > 0 && stagesData[idx-1].count > 0 
+              ? ((s.count / stagesData[idx-1].count) * 100).toFixed(0) 
+              : null;
+
+            return (
+              <div key={s.id} className="relative">
+                {idx > 0 && (
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
+                    <div className="w-0.5 h-6 bg-slate-100" />
+                    <div className="bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-black text-slate-400 italic">
+                      {dropPercent}% Conversão
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-12 items-center gap-4">
+                  <div className="col-span-3 text-right pr-4">
+                    <p className="text-sm font-black text-slate-800 uppercase tracking-tight">{s.label}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">{s.count} Leads</p>
+                  </div>
+                  <div className="col-span-6 relative h-14 flex items-center">
+                    <div className="absolute inset-0 bg-slate-50 rounded-2xl" />
+                    <div className="h-full rounded-2xl relative shadow-md overflow-hidden bg-slate-100 flex-1">
+                      <motion.div 
+                        initial={{ width: 0 }} 
+                        animate={{ width: `${widthPerc}%` }}
+                        transition={{ duration: 0.8, delay: idx * 0.1 }}
+                        className="h-full rounded-2xl relative shadow-sm"
+                        style={{ backgroundColor: s.color, border: `1px solid ${s.text}20` }}
+                      >
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-[10px] opacity-40 uppercase whitespace-nowrap" style={{ color: s.text }}>
+                          {((s.weighted / (totalWeighted || 1)) * 100).toFixed(0)}% do Fluxo
+                        </div>
+                      </motion.div>
+                    </div>
+                  </div>
+                  <div className="col-span-3 pl-4">
+                    <p className="text-base font-black text-slate-900">{fmt(s.value)}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: s.text }}>
+                      Prob: {(s.prob * 100).toFixed(0)}% · {fmt(s.weighted)}
+                    </p>
                   </div>
                 </div>
-                <div className="p-1.5 bg-slate-50 rounded-lg">
-                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-                </div>
               </div>
-              <p className="text-xs text-slate-500 mb-4 font-medium leading-relaxed">{labels[t]}</p>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Potencial Médio</p>
-                  <p className="text-base font-black" style={{ color: tc.text }}>{fmt(tpot / (tierCounts[t] || 1))}</p>
-                </div>
-                <div className="h-6 w-16 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100">
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3].map(i => <div key={i} className={`w-1 h-3 rounded-full ${i <= (t === 'A' ? 3 : t === 'B' ? 2 : 1) ? 'bg-indigo-400' : 'bg-slate-200'}`} />)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Previsão Ponderada */}
-        <Card title="Previsão de Receita Ponderada" subtitle="Baseado na probabilidade de cada estágio do funil">
-          <div className="flex items-center justify-between mb-8 p-6 bg-indigo-600 rounded-3xl shadow-xl shadow-indigo-100 text-white">
-            <div>
-              <p className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-1">Impacto Estimado</p>
-              <p className="text-3xl font-black tabular-nums">{fmt(totalWeighted)}</p>
-            </div>
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          <div className="space-y-4">
-            {stagesData.map((s, idx) => {
-              const maxVal = Math.max(...stagesData.map(st => st.value));
-              const widthPerc = maxVal > 0 ? (s.value / maxVal) * 100 : 0;
-              return (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase">
-                    <span>{s.label}</span>
-                    <span className="text-slate-900 font-black">{fmt(s.value)}</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                    <motion.div 
-                      initial={{ width: 0 }} 
-                      animate={{ width: `${widthPerc}%` }}
-                      className="h-full rounded-full" 
-                      style={{ background: s.text }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Prioridades Estratégicas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card 
-          title="Foco de Atuação" 
-          subtitle="Ações imediatas para conversão"
-          headerAction={<button onClick={() => setActiveTab('clients')} className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-all">Ver Roadmap</button>}
+          title="Saúde do Pipeline" 
+          subtitle="Gargalos e Oportunidades Identificadas"
+          className="shadow-sm"
         >
-          <div className="space-y-4">
-            {clients.filter(c => c.tier === 'A').slice(0, 4).map(c => (
-              <div key={c.id} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-2xl transition-all border border-transparent hover:border-slate-100 group">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-black shrink-0 shadow-sm" style={{ background: TYPE_COLORS[c.type] }}>
-                  {c.name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800 truncate">{c.name}</p>
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase">{c.type} • {c.contact}</p>
+          <div className="space-y-5">
+            {[
+              { label: 'Leads Tier A Estagnados', value: clients.filter(c => c.tier === 'A' && c.pipelineStage < 2).length, trend: 'Critico', color: 'rose' },
+              { label: 'Oportunidades com Proposta', value: clients.filter(c => c.pipelineStage === 2).length, trend: 'Acompanhar', color: 'indigo' },
+              { label: 'Ciclo Médio Est.', value: '18 dias', trend: '-2 dias', color: 'emerald' },
+              { label: 'Velocity do Funil', value: 'R$ 12k/dia', trend: 'Alta', color: 'amber' },
+            ].map(item => (
+              <div key={item.label} className="flex justify-between items-center p-4 bg-slate-50 rounded-[1.5rem] border border-slate-100 hover:bg-slate-100/50 transition-all cursor-default group">
+                <div>
+                  <p className="text-base font-bold text-slate-800">{item.label}</p>
+                  <p className="text-xs text-slate-400 font-semibold uppercase mt-0.5">Métrica do Canal</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-black text-slate-700">{fmt(c.ticketMedio)}</p>
-                  {c.gapVenda > 0 ? (
-                    <p className="text-[10px] text-emerald-600 font-black uppercase">Gap: {fmt(c.gapVenda)}</p>
-                  ) : (
-                    <p className="text-[10px] text-slate-300 font-bold uppercase truncate">Sem Gap</p>
-                  )}
+                  <p className="text-xl font-black text-slate-900">{item.value}</p>
+                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${item.color === 'rose' ? 'bg-rose-100 text-rose-600' : item.color === 'indigo' ? 'bg-indigo-100 text-indigo-600' : item.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                    {item.trend}
+                  </span>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
               </div>
             ))}
-            {clients.filter(c => c.tier === 'A').length === 0 && (
-              <div className="py-12 text-center text-slate-300">
-                <Target className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                <p className="text-xs font-bold uppercase">Nenhum cliente Tier A</p>
-              </div>
-            )}
           </div>
         </Card>
-      </div>
 
-      {/* Métricas de Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-emerald-600" />
+        <Card 
+          title="Concentração por Tier" 
+          subtitle="Volume Financeiro por Perfil de Cliente"
+          className="shadow-sm"
+        >
+          <div className="flex flex-col h-full justify-between py-2">
+            <div className="flex gap-4 items-end h-40 mb-6">
+              {['A', 'B', 'C'].map(t => {
+                const tierVal = clients.filter(c => c.tier === t).reduce((acc, c) => acc + (c.ticketMedio || 0), 0);
+                const total = clients.reduce((acc, c) => acc + (c.ticketMedio || 0), 0);
+                const h = total > 0 ? (tierVal / total) * 100 : 0;
+                const colors: any = { A: '#6366f1', B: '#3b82f6', C: '#94a3b8' };
+                
+                return (
+                  <div key={t} className="flex-1 flex flex-col items-center gap-3 h-full">
+                    <div className="w-full bg-slate-50 rounded-xl relative group overflow-hidden flex-1 shadow-inner border border-slate-100">
+                      <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: `${h}%` }}
+                        className="absolute bottom-0 left-0 right-0 shadow-lg"
+                        style={{ backgroundColor: colors[t] }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/5">
+                        <p className="text-[10px] font-black text-slate-700 bg-white px-2 py-1 rounded shadow-sm">{h.toFixed(1)}%</p>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-black text-slate-800">Tier {t}</p>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter whitespace-nowrap">{fmt(tierVal)}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p className="text-sm font-bold text-slate-800">Taxa de Conversão</p>
+            <p className="text-sm text-slate-500 italic leading-relaxed text-center px-4">
+              "Gestor, sua visibilidade financeira está concentrada em <strong>Tier A</strong>. 
+              Garanta que essas contas não tenham gargalos no estágio de Proposta."
+            </p>
           </div>
-          <p className="text-3xl font-black text-slate-900">22.4%</p>
-          <div className="mt-4 h-2 w-full bg-slate-50 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 w-[22.4%] rounded-full shadow-lg shadow-emerald-100" />
-          </div>
-          <p className="text-[10px] text-slate-400 font-bold mt-3 uppercase tracking-wider italic">Geral da Carteira</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-              <Clock className="w-4 h-4 text-indigo-600" />
-            </div>
-            <p className="text-sm font-bold text-slate-800">Ciclo Médio</p>
-          </div>
-          <p className="text-3xl font-black text-slate-900">18 <span className="text-sm text-slate-400 font-bold uppercase">dias</span></p>
-          <div className="mt-4 flex gap-1">
-             {[1,1,1,1,1,1,1,0,0,0].map((v, i) => <div key={i} className={`h-2 flex-1 rounded-full ${v ? 'bg-indigo-400' : 'bg-slate-100'}`} />)}
-          </div>
-          <p className="text-[10px] text-slate-400 font-bold mt-3 uppercase tracking-wider italic">Oportunidade p/ Fechamento</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Award className="w-4 h-4 text-amber-600" />
-            </div>
-            <p className="text-sm font-bold text-slate-800">Score Médio</p>
-          </div>
-          <p className="text-3xl font-black text-slate-900">{avgScore.toFixed(0)}</p>
-          <div className="mt-4 h-2 w-full bg-slate-50 rounded-full overflow-hidden">
-            <div className="h-full bg-amber-500 rounded-full shadow-lg shadow-amber-100" style={{ width: `${avgScore}%` }} />
-          </div>
-          <p className="text-[10px] text-slate-400 font-bold mt-3 uppercase tracking-wider italic">Qualificação da Carteira</p>
-        </div>
+        </Card>
       </div>
     </div>
   );
