@@ -17,7 +17,15 @@ export const INITIAL_CLIENTS: Client[] = [
     ultimaInteracao: 'Enviou proposta via Zap',
     nurtureActive: true,
     nurtureStep: 1,
-    notas: 'Frota pesada, interesse em lubrificantes'
+    notas: 'Frota pesada, interesse em lubrificantes',
+    endereco: 'Rua das Industrias, 1200 - São Paulo, SP',
+    potencialMapeado: true,
+    gapVenda: 12000,
+    margem: 15,
+    sensibilidadePreco: 'Média',
+    dependenciaOp: 4,
+    crossSell: 'Filtros, Graxas',
+    upsell: 'Contrato Fidelidade'
   },
   {
     id: '2',
@@ -35,7 +43,15 @@ export const INITIAL_CLIENTS: Client[] = [
     ultimaInteracao: 'Aguardando vistoria',
     nurtureActive: true,
     nurtureStep: 0,
-    notas: 'Manutenção pré-safra'
+    notas: 'Grande potencial de expansão para safra de 2024',
+    endereco: 'Av. Brasil, s/n - Fazenda Nova, PR',
+    potencialMapeado: true,
+    gapVenda: 45000,
+    margem: 12,
+    sensibilidadePreco: 'Média',
+    dependenciaOp: 5,
+    crossSell: 'Lubrificante p/ Trator',
+    upsell: 'Aditivos Premium'
   },
   {
     id: '3',
@@ -53,7 +69,15 @@ export const INITIAL_CLIENTS: Client[] = [
     ultimaInteracao: 'Reunião marcada p/ terça',
     nurtureActive: false,
     nurtureStep: 0,
-    notas: 'Potencial global de lubrificantes'
+    notas: 'Exige relatórios de sustentabilidade mensalmente',
+    endereco: 'Rua Metalúrgica, 450 - São Caetano do Sul, SP',
+    potencialMapeado: true,
+    gapVenda: 8000,
+    margem: 18,
+    sensibilidadePreco: 'Baixa',
+    dependenciaOp: 2,
+    crossSell: 'Limpeza de Bico',
+    upsell: 'Consultoria de Eficiência'
   },
   {
     id: '4',
@@ -71,7 +95,15 @@ export const INITIAL_CLIENTS: Client[] = [
     ultimaInteracao: 'Contrato assinado',
     nurtureActive: false,
     nurtureStep: 0,
-    notas: 'Distribuição regional'
+    notas: 'Interesse em atalhos para compras rápidas via portal',
+    endereco: 'Av. Sertório, 890 - Porto Alegre, RS',
+    potencialMapeado: false,
+    gapVenda: 0,
+    margem: 20,
+    sensibilidadePreco: 'Alta',
+    dependenciaOp: 3,
+    crossSell: 'Filtro Ar',
+    upsell: 'Seguro de Carga'
   },
   {
     id: '5',
@@ -89,6 +121,14 @@ export const INITIAL_CLIENTS: Client[] = [
     ultimaInteracao: 'Primeiro contato realizado',
     nurtureActive: true,
     nurtureStep: 2,
-    notas: 'Dificuldade de caixa, focar em economia'
+    notas: 'Negociação frequente por preço e volume',
+    endereco: 'Posto Graal, BR-116 - Km 45, RJ',
+    potencialMapeado: true,
+    gapVenda: 25000,
+    margem: 10,
+    sensibilidadePreco: 'Alta',
+    dependenciaOp: 4,
+    crossSell: 'Graxas e Estopa',
+    upsell: 'Combustível Aditivado'
   }
 ];

@@ -72,9 +72,14 @@ export const PipelineView = ({ clients, onEditClient }: PipelineViewProps) => {
                           <div key={i} className="w-5 h-5 rounded-full border-2 border-white bg-slate-200" />
                         ))}
                       </div>
-                      <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase italic">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        {client.ultimaInteracao}
+                      <div className="flex flex-col items-end overflow-hidden ml-2">
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase italic">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          {client.ultimaInteracao}
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium truncate w-full text-right" title={client.endereco}>
+                          {client.endereco}
+                        </p>
                       </div>
                     </div>
                   </motion.div>

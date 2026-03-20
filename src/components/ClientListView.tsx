@@ -19,7 +19,7 @@ export const ClientListView = ({ clients, onEdit, onDelete, onAdd }: ClientListV
 
   const filtered = clients.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.contact.toLowerCase().includes(search.toLowerCase()) ||
+      c.contato.toLowerCase().includes(search.toLowerCase()) ||
       c.type.toLowerCase().includes(search.toLowerCase());
     const matchesTier = filterTier === 'Todos' || c.tier === filterTier;
     const matchesType = filterType === 'Todos' || c.type === filterType;
@@ -89,7 +89,7 @@ export const ClientListView = ({ clients, onEdit, onDelete, onAdd }: ClientListV
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-bold text-slate-800 text-sm leading-tight truncate">{c.name}</h3>
-                      <p className="text-xs text-slate-400 truncate">{c.contact}</p>
+                      <p className="text-xs text-slate-400 truncate">{c.contato}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">

@@ -1,0 +1,27 @@
+src/App.tsx(184,31): error TS2322: Type '{ key: any; client: any; onClick: () => void; }' is not assignable to type 'CardProps'.
+  Property 'key' does not exist on type 'CardProps'.
+src/components/ClientListView.tsx(22,9): error TS2551: Property 'contact' does not exist on type 'Client'. Did you mean 'contato'?
+src/components/ClientListView.tsx(92,73): error TS2551: Property 'contact' does not exist on type 'Client'. Did you mean 'contato'?
+src/components/ClientListView.tsx(96,25): error TS2339: Property 'potencialMapeado' does not exist on type 'Client'.
+src/components/ClientListView.tsx(116,93): error TS2339: Property 'potencialMapeado' does not exist on type 'Client'.
+src/components/ClientListView.tsx(116,150): error TS2339: Property 'potencialMapeado' does not exist on type 'Client'.
+src/components/ClientListView.tsx(117,92): error TS2339: Property 'potencialMapeado' does not exist on type 'Client'.
+src/components/ClientListView.tsx(118,26): error TS2339: Property 'potencialMapeado' does not exist on type 'Client'.
+src/components/ClientListView.tsx(120,72): error TS2339: Property 'potencialMapeado' does not exist on type 'Client'.
+src/components/ClientListView.tsx(121,26): error TS2339: Property 'potencialMapeado' does not exist on type 'Client'.
+src/components/ClientListView.tsx(121,51): error TS2339: Property 'gapVenda' does not exist on type 'Client'.
+src/components/ClientListView.tsx(128,52): error TS2339: Property 'margem' does not exist on type 'Client'.
+src/components/ClientListView.tsx(129,48): error TS2339: Property 'sensibilidadePreco' does not exist on type 'Client'.
+src/components/ClientListView.tsx(130,50): error TS2339: Property 'dependenciaOp' does not exist on type 'Client'.
+src/components/ClientListView.tsx(139,21): error TS2339: Property 'crossSell' does not exist on type 'Client'.
+src/components/ClientListView.tsx(139,36): error TS2339: Property 'upsell' does not exist on type 'Client'.
+src/components/ClientListView.tsx(141,24): error TS2339: Property 'crossSell' does not exist on type 'Client'.
+src/components/ClientListView.tsx(141,152): error TS2339: Property 'crossSell' does not exist on type 'Client'.
+src/components/ClientListView.tsx(142,24): error TS2339: Property 'upsell' does not exist on type 'Client'.
+src/components/ClientListView.tsx(142,157): error TS2339: Property 'upsell' does not exist on type 'Client'.
+src/components/MatrixView.tsx(14,123): error TS2339: Property 'sensibilidadePreco' does not exist on type 'Client'.
+src/components/MatrixView.tsx(15,114): error TS2339: Property 'gapVenda' does not exist on type 'Client'.
+src/components/MatrixView.tsx(16,98): error TS2339: Property 'sensibilidadePreco' does not exist on type 'Client'.
+src/components/MatrixView.tsx(25,17): error TS2322: Type '{ children: any[]; key: number; title: string; subtitle: string; }' is not assignable to type 'CardProps'.
+  Property 'key' does not exist on type 'CardProps'.
+

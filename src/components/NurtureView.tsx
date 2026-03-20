@@ -124,7 +124,7 @@ export const NurtureView = ({ clients, onEditClient }: NurtureViewProps) => {
                               T{client.tier}
                             </span>
                           </div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase italic opacity-60">{client.contato} · {client.type}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase italic opacity-60">{client.contato} · {client.type} {client.endereco && ` · ${client.endereco}`}</p>
                         </div>
                       </div>
                     </td>

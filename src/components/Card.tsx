@@ -10,7 +10,7 @@ interface CardProps {
   onClick: () => void;
 }
 
-export const Card = ({ client, onClick }: CardProps) => {
+export const Card: React.FC<CardProps> = ({ client, onClick }) => {
   const tierStyle = TIER_COLORS[client.tier];
 
   return (
@@ -40,6 +40,17 @@ export const Card = ({ client, onClick }: CardProps) => {
       <div className="flex items-center gap-2 mb-4 opacity-60">
         <MessageCircle className="w-3 h-3 text-slate-400" />
         <p className="text-[10px] font-black text-slate-400 italic uppercase truncate capitalize">{client.contato.split(' ')[0]}</p>
+      </div>
+      
+      <div className="mb-4 space-y-1">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[9px] font-black text-slate-300 uppercase italic shrink-0">Interação</span>
+          <p className="text-[10px] font-bold text-slate-600 truncate italic">{client.ultimaInteracao}</p>
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[9px] font-black text-slate-300 uppercase italic shrink-0">Endereço</span>
+          <p className="text-[10px] font-medium text-slate-400 truncate" title={client.endereco}>{client.endereco}</p>
+        </div>
       </div>
 
       <div className="flex items-center justify-between pt-4 border-t border-slate-50">

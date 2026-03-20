@@ -1,0 +1,5 @@
+src/App.tsx(191,31): error TS2322: Type '{ key: any; client: any; onClick: () => void; }' is not assignable to type 'CardProps'.
+  Property 'key' does not exist on type 'CardProps'.
+src/components/MatrixView.tsx(25,17): error TS2322: Type '{ children: any[]; key: number; title: string; subtitle: string; }' is not assignable to type 'CardProps'.
+  Property 'key' does not exist on type 'CardProps'.
+

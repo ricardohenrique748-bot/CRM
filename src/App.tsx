@@ -48,7 +48,15 @@ const App = () => {
       ultimaInteracao: 'Lead recém-cadastrado',
       nurtureActive: false,
       nurtureStep: 0,
-      notas: ''
+      notas: '',
+      endereco: '',
+      potencialMapeado: false,
+      gapVenda: 0,
+      margem: 0,
+      sensibilidadePreco: 'Média',
+      dependenciaOp: 1,
+      crossSell: '',
+      upsell: ''
     };
     setSelectedClient(newClient);
     setIsModalOpen(true);

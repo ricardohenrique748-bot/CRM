@@ -8,7 +8,7 @@ interface CardProps {
   headerAction?: React.ReactNode;
 }
 
-export const Card = ({ title, subtitle, children, className, headerAction }: CardProps) => (
+export const Card: React.FC<CardProps> = ({ title, subtitle, children, className, headerAction }) => (
   <div className={`bg-white rounded-3xl border border-slate-200/60 overflow-hidden shadow-sm ${className}`}>
     {(title || subtitle) && (
       <div className="px-6 py-5 border-b border-slate-50 flex justify-between items-center">

@@ -1,4 +1,5 @@
 import { LucideIcon } from 'lucide-react';
+// Test update
 
 export type ClientType = 'Frotista' | 'Indústria' | 'Agro' | 'Revenda' | 'Autônomo';
 export type ClientSize = 'Pequeno' | 'Médio' | 'Grande';
@@ -25,6 +26,14 @@ export interface Client {
   nurtureActive: boolean;
   nurtureStep: number;
   notas: string;
+  endereco: string;
+  potencialMapeado: boolean;
+  gapVenda: number;
+  margem: number;
+  sensibilidadePreco: string;
+  dependenciaOp: number;
+  crossSell: string;
+  upsell: string;
 }
 
 export interface User {

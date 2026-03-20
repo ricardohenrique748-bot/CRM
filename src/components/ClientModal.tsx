@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Save, Trash2, MessageCircle, TrendingUp, Target, User, Phone, MapPin, Hash, DollarSign, Calendar, Info } from 'lucide-react';
+import { X, Save, Trash2, MessageCircle, TrendingUp, Target, User, Phone, MapPin, Hash, DollarSign, Calendar, Info, Mail, BarChart3, RefreshCw } from 'lucide-react';
 import { STAGES, TYPE_COLORS, TIER_COLORS, NURTURE_STEPS } from '../constants';
 import { Client, ClientType, Tier } from '../types';
 import { fmt, calculateScore, assignTierFromScore } from '../utils';
@@ -17,7 +17,7 @@ export const ClientModal = ({ client, onClose, onSave, onDelete }: ClientModalPr
   const handleChange = (field: keyof Client, value: any) => {
     const newClient = { ...edited, [field]: value };
     if (field === 'ticketMedio' || field === 'pipelineStage' || field === 'frequencia') {
-      const score = calculateScore(newClient.ticketMedio, newClient.pipelineStage, newClient.frequencia);
+      const score = calculateScore(Number(newClient.ticketMedio), Number(newClient.frequencia), Number(newClient.pipelineStage));
       newClient.score = score;
       newClient.tier = assignTierFromScore(score);
     }
@@ -87,37 +87,38 @@ export const ClientModal = ({ client, onClose, onSave, onDelete }: ClientModalPr
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="group relative">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Pessoa de Contato</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
-                        <input 
-                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase"
-                          value={edited.contato} 
-                          onChange={e => handleChange('contato', e.target.value)} 
-                        />
-                      </div>
+                  <div className="group relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Pessoa de Contato</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
+                      <input 
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase"
+                        value={edited.contato} 
+                        onChange={e => handleChange('contato', e.target.value)} 
+                        placeholder="NOME DO RESPONSÁVEL"
+                      />
                     </div>
-                    <div className="group relative">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">WhatsApp / Fone</label>
-                      <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
-                        <input 
-                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase"
-                          value={edited.whatsapp} 
-                          onChange={e => handleChange('whatsapp', e.target.value)} 
-                        />
-                      </div>
+                  </div>
+
+                  <div className="group relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">WhatsApp / Fone</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
+                      <input 
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase"
+                        value={edited.whatsapp} 
+                        onChange={e => handleChange('whatsapp', e.target.value)} 
+                        placeholder="(00) 00000-0000"
+                      />
                     </div>
                   </div>
 
                   <div className="group relative">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">E-mail Corporativo</label>
                     <div className="relative">
-                      <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
                       <input 
-                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm lowercase"
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase"
                         value={edited.email} 
                         onChange={e => handleChange('email', e.target.value)} 
                         placeholder="contato@empresa.com.br"
@@ -125,15 +126,28 @@ export const ClientModal = ({ client, onClose, onSave, onDelete }: ClientModalPr
                     </div>
                   </div>
 
+                  <div className="group relative">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Localização / Endereço</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
+                      <input 
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase"
+                        value={edited.endereco} 
+                        onChange={e => handleChange('endereco', e.target.value)} 
+                        placeholder="RUA, NÚMERO, BAIRRO - CIDADE, UF"
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Segmento Estratégico</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {(['Frotista', 'Indústria', 'Agro', 'Revenda', 'Autônomo'] as ClientType[]).map(t => (
                         <button
                           key={t}
                           type="button"
                           onClick={() => handleChange('type', t)}
-                          className={`py-3 rounded-2xl border text-[10px] font-black uppercase transition-all shadow-sm ${edited.type === t ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+                          className={`px-5 py-3 rounded-full border text-[10px] font-black uppercase transition-all shadow-sm ${edited.type === t ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
                         >
                           {t}
                         </button>
@@ -143,13 +157,13 @@ export const ClientModal = ({ client, onClose, onSave, onDelete }: ClientModalPr
 
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Porte da Empresa</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {['Pequeno', 'Médio', 'Grande'].map(s => (
                         <button
                           key={s}
                           type="button"
                           onClick={() => handleChange('size', s)}
-                          className={`py-3 rounded-2xl border text-[10px] font-black uppercase transition-all shadow-sm ${edited.size === s ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+                          className={`px-5 py-3 rounded-full border text-[10px] font-black uppercase transition-all shadow-sm ${edited.size === s ? 'bg-slate-900 border-slate-900 text-white shadow-lg scale-105' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100'}`}
                         >
                           {s}
                         </button>
