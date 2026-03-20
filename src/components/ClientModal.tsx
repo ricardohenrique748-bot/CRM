@@ -120,35 +120,40 @@ export const ClientModal = ({ client, onClose, onSave, onDelete }: ClientModalPr
                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-black text-slate-800 placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm lowercase"
                         value={edited.email} 
                         onChange={e => handleChange('email', e.target.value)} 
-                        placeholder="EX: contato@empresa.com.br"
+                        placeholder="contato@empresa.com.br"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="group relative">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Segmento</label>
-                      <select 
-                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase appearance-none"
-                        value={edited.type}
-                        onChange={e => handleChange('type', e.target.value)}
-                      >
-                        {['Frotista', 'Indústria', 'Agro', 'Revenda', 'Autônomo'].map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Segmento Estratégico</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Frotista', 'Indústria', 'Agro', 'Revenda', 'Autônomo'] as ClientType[]).map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => handleChange('type', t)}
+                          className={`py-3 rounded-2xl border text-[10px] font-black uppercase transition-all shadow-sm ${edited.type === t ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+                        >
+                          {t}
+                        </button>
+                      ))}
                     </div>
-                    <div className="group relative">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Porte</label>
-                      <select 
-                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-4 font-black text-slate-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all outline-none italic text-sm uppercase appearance-none"
-                        value={edited.size}
-                        onChange={e => handleChange('size', e.target.value)}
-                      >
-                        {['Pequeno', 'Médio', 'Grande'].map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1.5 block ml-1 italic group-focus-within:text-indigo-600 transition-colors">Porte da Empresa</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['Pequeno', 'Médio', 'Grande'].map(s => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => handleChange('size', s)}
+                          className={`py-3 rounded-2xl border text-[10px] font-black uppercase transition-all shadow-sm ${edited.size === s ? 'bg-slate-900 border-slate-900 text-white shadow-xl scale-105' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
