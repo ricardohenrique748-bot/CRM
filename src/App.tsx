@@ -1847,12 +1847,17 @@ export default function App() {
 
             <nav className="flex-1 p-3 space-y-1">
               {NAV.map(item => (
-                <button key={item.id} onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}>
-                  <item.icon className="w-4 h-4" />{item.label}
-                  {item.id === 'clients' && mortoVivos.length > 0 && (
-                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-400 text-white">{mortoVivos.length}</span>
-                  )}
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                    activeTab === item.id
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                  }`}
+                >
+                  <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-indigo-500' : 'text-slate-400'}`} />
+                  {item.label}
                 </button>
               ))}
             </nav>
